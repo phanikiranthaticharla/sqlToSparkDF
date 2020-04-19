@@ -8,9 +8,13 @@ import java.sql.SQLException;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.DataFrameReader;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.*;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
 
 /**
  * CREDITS: crunchify.com, code to connect to mysql is taken from https://crunchify.com/java-mysql-jdbc-hello-world-tutorial-create-connection-insert-data-and-retrieve-data-from-mysql/
@@ -26,9 +30,36 @@ public class mySqlDataToSparkDF {
 
     static Connection sqlConn = null;
     static PreparedStatement sqlStatement = null;
+    static String jdbcUrl = "jdbc:mysql://localhost:3306/phaniDB";
+    static String dbUserName = "root";
+    static String dbPassword = "password";
+    static SparkSession spark = SparkSession.builder().appName("documentation").master("local").getOrCreate();
 
     public static void main(String[] argv) {
+        mySqlDataToSparkDF obj = new mySqlDataToSparkDF();
+        mySQLConnection();
+        obj.createParquetUsingSparkDFReader();
+    }
 
+    private void createParquetUsingSparkDFReader() {
+        /*public Dataset<Row> jdbc(String url,
+                         String table,
+                         java.util.Properties properties)
+
+         */
+        String table = "(Select companyName from Employee) Emp";
+        Properties properties = new Properties();
+        properties.put("user", dbUserName);
+        properties.put("password", dbPassword);
+        //SparkSession spark = SparkSession.builder().appName("documentation").master("local").getOrCreate();
+        DataFrameReader dfr = new DataFrameReader(spark);
+        Dataset<Row> df = dfr.jdbc(jdbcUrl, table, properties);
+        df.show();
+        df.write().parquet("/home/phani/parquet_files/dataframereader_to_parquet");
+
+    }
+
+    private static void mySQLConnection() {
         try {
             log("--------Make JDBC Connection------------");
             makeJDBCConnection();
@@ -63,7 +94,7 @@ public class mySqlDataToSparkDF {
 
         try {
             // DriverManager: The basic service for managing a set of JDBC drivers.
-            sqlConn = DriverManager.getConnection("jdbc:mysql://localhost:3306/phaniDB", "root", "password");
+            sqlConn = DriverManager.getConnection(jdbcUrl, dbUserName, dbPassword);
             if (sqlConn != null) {
                 log("Connection Successful! Enjoy. Now it's time to push data");
             } else {
@@ -122,10 +153,10 @@ public class mySqlDataToSparkDF {
                 // Simply Print the results
                 System.out.format("%s, %s, %s, %s\n", name, address, employeeCount, website);
             }
-            SparkSession spark = SparkSession.builder().appName("documentation").master("local").getOrCreate();
+
             Dataset<Row> sqlDF = spark.createDataFrame(list, Employee.class);
             sqlDF.printSchema();
-            sqlDF.write().parquet("/home/phani/parquet_files/parquet_files1");
+            sqlDF.write().parquet("/home/phani/parquet_files/rs_to_parquet");
 
         } catch (
 
